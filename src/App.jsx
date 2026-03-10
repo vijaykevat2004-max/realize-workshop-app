@@ -26,6 +26,7 @@ function App() {
   const [filter, setFilter] = useState('ALL')
   const [editingItemId, setEditingItemId] = useState(null)
   const [form, setForm] = useState(initialForm)
+  const [qtyInputs, setQtyInputs] = useState({})
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -181,7 +182,10 @@ function App() {
 
     let response
     if (editingItemId) {
-      response = await supabase.from('items').update(payload).eq('id', editingItemId)
+      response = await supabase
+        .from('items')
+        .update(payload)
+        .eq('id', editingItemId)
     } else {
       response = await supabase.from('items').insert([payload])
     }
@@ -218,12 +222,27 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function handleQtyUpdate(item, change) {
+  function handleQtyInputChange(itemId, value) {
+    setQtyInputs((prev) => ({
+      ...prev,
+      [itemId]: value,
+    }))
+  }
+
+  async function handleCustomQtyUpdate(item, mode) {
     setError('')
     setSuccessMessage('')
 
+    const rawValue = qtyInputs[item.id]
+    const changeQty = Number(rawValue)
+
+    if (!rawValue || Number.isNaN(changeQty) || changeQty <= 0) {
+      setError('Please enter a valid quantity greater than zero.')
+      return
+    }
+
     const currentQty = Number(item.current_qty || 0)
-    const newQty = currentQty + change
+    const newQty = mode === 'add' ? currentQty + changeQty : currentQty - changeQty
 
     if (newQty < 0) {
       setError('Quantity cannot go below zero.')
@@ -238,7 +257,15 @@ function App() {
     if (error) {
       setError(error.message)
     } else {
-      setSuccessMessage(`Quantity updated for ${item.description}.`)
+      setSuccessMessage(
+        mode === 'add'
+          ? `Added ${changeQty} to ${item.description}.`
+          : `Removed ${changeQty} from ${item.description}.`
+      )
+      setQtyInputs((prev) => ({
+        ...prev,
+        [item.id]: '',
+      }))
       await fetchItems()
     }
   }
@@ -312,7 +339,9 @@ function App() {
         </div>
 
         {error && <div className="alert-box error-box">Error: {error}</div>}
-        {successMessage && <div className="alert-box success-box">{successMessage}</div>}
+        {successMessage && (
+          <div className="alert-box success-box">{successMessage}</div>
+        )}
 
         <div className="stats-grid">
           <div className="stat-card">
@@ -346,28 +375,83 @@ function App() {
             </div>
 
             {editingItemId && (
-              <button className="secondary-btn" type="button" onClick={resetForm}>
+              <button
+                className="secondary-btn"
+                type="button"
+                onClick={resetForm}
+              >
                 Cancel Edit
               </button>
             )}
           </div>
 
           <form className="add-item-form" onSubmit={handleAddOrUpdateItem}>
-            <input type="text" name="sr_no" placeholder="Sr.No (optional)" value={form.sr_no} onChange={handleChange} />
-            <input type="text" name="description" placeholder="Description" value={form.description} onChange={handleChange} />
-            <input type="text" name="model_no" placeholder="Model No" value={form.model_no} onChange={handleChange} />
-            <input type="text" name="location" placeholder="Location" value={form.location} onChange={handleChange} />
-            <input type="text" name="unit" placeholder="Unit" value={form.unit} onChange={handleChange} />
-            <input type="number" name="current_qty" placeholder="Current Qty" value={form.current_qty} onChange={handleChange} />
-            <input type="number" name="min_stock_level" placeholder="Min Stock Level" value={form.min_stock_level} onChange={handleChange} />
+            <input
+              type="text"
+              name="sr_no"
+              placeholder="Sr.No (optional)"
+              value={form.sr_no}
+              onChange={handleChange}
+            />
+            <input
+              type="text"
+              name="description"
+              placeholder="Description"
+              value={form.description}
+              onChange={handleChange}
+            />
+            <input
+              type="text"
+              name="model_no"
+              placeholder="Model No"
+              value={form.model_no}
+              onChange={handleChange}
+            />
+            <input
+              type="text"
+              name="location"
+              placeholder="Location"
+              value={form.location}
+              onChange={handleChange}
+            />
+            <input
+              type="text"
+              name="unit"
+              placeholder="Unit"
+              value={form.unit}
+              onChange={handleChange}
+            />
+            <input
+              type="number"
+              name="current_qty"
+              placeholder="Current Qty"
+              value={form.current_qty}
+              onChange={handleChange}
+            />
+            <input
+              type="number"
+              name="min_stock_level"
+              placeholder="Min Stock Level"
+              value={form.min_stock_level}
+              onChange={handleChange}
+            />
 
             <label className="checkbox-row">
-              <input type="checkbox" name="need_to_order" checked={form.need_to_order} onChange={handleChange} />
+              <input
+                type="checkbox"
+                name="need_to_order"
+                checked={form.need_to_order}
+                onChange={handleChange}
+              />
               <span>Need To Order</span>
             </label>
 
             <button type="submit" className="add-btn" disabled={saving}>
-              {saving ? 'Saving...' : editingItemId ? 'Update Item' : 'Add Item'}
+              {saving
+                ? 'Saving...'
+                : editingItemId
+                ? 'Update Item'
+                : 'Add Item'}
             </button>
           </form>
         </div>
@@ -457,10 +541,34 @@ function App() {
               />
 
               <div className="filter-group">
-                <button className={filter === 'ALL' ? 'filter-btn active' : 'filter-btn'} onClick={() => setFilter('ALL')} type="button">All</button>
-                <button className={filter === 'LOW' ? 'filter-btn active' : 'filter-btn'} onClick={() => setFilter('LOW')} type="button">Low Stock</button>
-                <button className={filter === 'OUT' ? 'filter-btn active' : 'filter-btn'} onClick={() => setFilter('OUT')} type="button">Out of Stock</button>
-                <button className={filter === 'ORDER' ? 'filter-btn active' : 'filter-btn'} onClick={() => setFilter('ORDER')} type="button">Need To Order</button>
+                <button
+                  className={filter === 'ALL' ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => setFilter('ALL')}
+                  type="button"
+                >
+                  All
+                </button>
+                <button
+                  className={filter === 'LOW' ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => setFilter('LOW')}
+                  type="button"
+                >
+                  Low Stock
+                </button>
+                <button
+                  className={filter === 'OUT' ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => setFilter('OUT')}
+                  type="button"
+                >
+                  Out of Stock
+                </button>
+                <button
+                  className={filter === 'ORDER' ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => setFilter('ORDER')}
+                  type="button"
+                >
+                  Need To Order
+                </button>
               </div>
             </div>
           </div>
@@ -482,7 +590,7 @@ function App() {
                     <th>Min Stock</th>
                     <th>Need To Order</th>
                     <th>Status</th>
-                    <th>Quick Update</th>
+                    <th>Custom Qty Update</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -506,18 +614,60 @@ function App() {
                         <td>{item.min_stock_level}</td>
                         <td>{item.need_to_order ? 'Yes' : 'No'}</td>
                         <td>
-                          <span className={getStatusClass(item)}>{getStatus(item)}</span>
+                          <span className={getStatusClass(item)}>
+                            {getStatus(item)}
+                          </span>
                         </td>
                         <td>
-                          <div className="qty-actions">
-                            <button className="qty-btn minus" type="button" onClick={() => handleQtyUpdate(item, -1)}>-1</button>
-                            <button className="qty-btn plus" type="button" onClick={() => handleQtyUpdate(item, 1)}>+1</button>
+                          <div className="custom-qty-box">
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Qty"
+                              className="qty-input"
+                              value={qtyInputs[item.id] || ''}
+                              onChange={(e) =>
+                                handleQtyInputChange(item.id, e.target.value)
+                              }
+                            />
+                            <div className="qty-actions">
+                              <button
+                                className="qty-btn plus"
+                                type="button"
+                                onClick={() =>
+                                  handleCustomQtyUpdate(item, 'add')
+                                }
+                              >
+                                Add
+                              </button>
+                              <button
+                                className="qty-btn minus"
+                                type="button"
+                                onClick={() =>
+                                  handleCustomQtyUpdate(item, 'remove')
+                                }
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </td>
                         <td>
                           <div className="row-actions">
-                            <button className="table-btn edit" type="button" onClick={() => handleEdit(item)}>Edit</button>
-                            <button className="table-btn danger" type="button" onClick={() => handleDeactivate(item)}>Deactivate</button>
+                            <button
+                              className="table-btn edit"
+                              type="button"
+                              onClick={() => handleEdit(item)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="table-btn danger"
+                              type="button"
+                              onClick={() => handleDeactivate(item)}
+                            >
+                              Deactivate
+                            </button>
                           </div>
                         </td>
                       </tr>
