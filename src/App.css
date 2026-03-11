@@ -502,3 +502,68 @@ body {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #e6ebf2;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  padding: 28px;
+}
+
+.auth-card h1,
+.auth-card h2 {
+  margin-top: 0;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  background: #ffffff;
+  color: #111827;
+}
+
+.auth-form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.custom-qty-box {
+  min-width: 150px;
+}
+
+.qty-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.qty-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
