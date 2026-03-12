@@ -274,7 +274,7 @@ function App() {
       base = searchedItems.filter((item) => item.need_to_order === true)
     }
 
-    return base
+    return base.slice(0, 300)
   }, [searchedItems, filter])
 
   function handleChange(e) {
@@ -681,7 +681,7 @@ function App() {
               <input
                 type="checkbox"
                 name="need_to_order"
-                checked={form.needToOrder}
+                checked={form.need_to_order}
                 onChange={handleChange}
               />
               <span>Need To Order</span>
@@ -702,7 +702,7 @@ function App() {
             <div>
               <h2>All Inventory Items</h2>
               <p className="section-note">
-                Fast search enabled. Search by item, model, location, or sr no.
+                Fast search enabled. Showing first 300 matching rows for best speed.
               </p>
             </div>
 
@@ -712,7 +712,10 @@ function App() {
                 className="search-input"
                 placeholder="Search by item, model, location, sr no"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  if (filter !== 'ALL') setFilter('ALL')
+                }}
               />
 
               <div className="filter-group">
@@ -816,9 +819,7 @@ function App() {
                               <button
                                 className="qty-btn minus"
                                 type="button"
-                                onClick={() =>
-                                  handleCustomQtyUpdate(item, 'remove')
-                                }
+                                onClick={() => handleCustomQtyUpdate(item, 'remove')}
                               >
                                 Remove
                               </button>
