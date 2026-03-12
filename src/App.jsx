@@ -138,11 +138,23 @@ function App() {
 
       if (error) throw error
 
-      const prepared = (data || []).map((item) => ({
-        ...item,
-        _search:
-          `${item.sr_no || ''} ${item.description || ''} ${item.model_no || ''} ${item.location || ''}`.toLowerCase(),
-      }))
+      const prepared = (data || []).map((item) => {
+        const normalizedSearch = [
+          item.sr_no ?? '',
+          item.description ?? '',
+          item.model_no ?? '',
+          item.location ?? '',
+        ]
+          .join(' ')
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        return {
+          ...item,
+          _search: normalizedSearch,
+        }
+      })
 
       setItems(prepared)
     } catch (err) {
@@ -230,8 +242,21 @@ function App() {
   )
 
   const searchedItems = useMemo(() => {
-    if (!debouncedSearch) return items
-    return items.filter((item) => item._search.includes(debouncedSearch))
+    const normalizedTerm = debouncedSearch
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (!normalizedTerm) return items
+
+    return items.filter((item) => {
+      const searchText = String(item._search || '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+
+      return searchText.includes(normalizedTerm)
+    })
   }, [items, debouncedSearch])
 
   const filteredItems = useMemo(() => {
@@ -249,7 +274,7 @@ function App() {
       base = searchedItems.filter((item) => item.need_to_order === true)
     }
 
-    return base.slice(0, 500)
+    return base
   }, [searchedItems, filter])
 
   function handleChange(e) {
@@ -656,7 +681,7 @@ function App() {
               <input
                 type="checkbox"
                 name="need_to_order"
-                checked={form.need_to_order}
+                checked={form.needToOrder}
                 onChange={handleChange}
               />
               <span>Need To Order</span>
