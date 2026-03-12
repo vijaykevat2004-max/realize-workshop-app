@@ -229,21 +229,28 @@ function App() {
     [items]
   )
 
+  const searchedItems = useMemo(() => {
+    if (!debouncedSearch) return items
+    return items.filter((item) => item._search.includes(debouncedSearch))
+  }, [items, debouncedSearch])
+
   const filteredItems = useMemo(() => {
-    let base = items
+    let base = searchedItems
 
     if (filter === 'LOW') {
-      base = lowStockItems
+      base = searchedItems.filter((item) => {
+        const qty = Number(item.current_qty || 0)
+        const min = Number(item.min_stock_level || 0)
+        return qty > 0 && qty <= min
+      })
     } else if (filter === 'OUT') {
-      base = outOfStockItems
+      base = searchedItems.filter((item) => Number(item.current_qty || 0) <= 0)
     } else if (filter === 'ORDER') {
-      base = needToOrderItems
+      base = searchedItems.filter((item) => item.need_to_order === true)
     }
 
-    if (!debouncedSearch) return base.slice(0, 500)
-
-    return base.filter((item) => item._search.includes(debouncedSearch)).slice(0, 500)
-  }, [items, lowStockItems, outOfStockItems, needToOrderItems, filter, debouncedSearch])
+    return base.slice(0, 500)
+  }, [searchedItems, filter])
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
@@ -455,7 +462,7 @@ function App() {
     }
   }
 
-  async function handleDownloadExcel() {
+  function handleDownloadExcel() {
     const exportRows = items.map((item) => ({
       ID: item.id,
       'Sr.No': item.sr_no || '',
@@ -531,9 +538,7 @@ function App() {
           <div className="hero-left">
             <p className="hero-badge">REALIZE WORKSHOP</p>
             <h1>Inventory Management Dashboard</h1>
-            <p className="hero-subtitle">
-              Logged in as: {session.user.email}
-            </p>
+            <p className="hero-subtitle">Logged in as: {session.user.email}</p>
           </div>
 
           <div className="top-actions">
@@ -779,9 +784,7 @@ function App() {
                               <button
                                 className="qty-btn plus"
                                 type="button"
-                                onClick={() =>
-                                  handleCustomQtyUpdate(item, 'add')
-                                }
+                                onClick={() => handleCustomQtyUpdate(item, 'add')}
                               >
                                 Add
                               </button>
