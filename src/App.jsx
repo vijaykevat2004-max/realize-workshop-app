@@ -133,7 +133,7 @@ function App() {
           'id, sr_no, description, model_no, location, unit, current_qty, min_stock_level, need_to_order, is_active'
         )
         .eq('is_active', true)
-        .order('description', { ascending: true })
+        .order('id', { ascending: false })
         .range(0, 10000)
 
       if (error) throw error
@@ -249,13 +249,15 @@ function App() {
 
     if (!normalizedTerm) return items
 
+    const searchWords = normalizedTerm.split(' ').filter(Boolean)
+
     return items.filter((item) => {
       const searchText = String(item._search || '')
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim()
 
-      return searchText.includes(normalizedTerm)
+      return searchWords.every((word) => searchText.includes(word))
     })
   }, [items, debouncedSearch])
 
@@ -347,9 +349,10 @@ function App() {
           note: 'Item details updated',
         })
 
-        setSuccessMessage('Item updated successfully.')
-        resetForm()
         await fetchAll()
+        setSuccessMessage('Item updated successfully.')
+        setSearch(String(payload.sr_no || payload.description || ''))
+        resetForm()
       }
     } else {
       const { data, error } = await supabase
@@ -371,9 +374,10 @@ function App() {
           note: 'New item created',
         })
 
-        setSuccessMessage(`Item added successfully. Sr.No: ${finalSrNo}`)
-        resetForm()
         await fetchAll()
+        setSuccessMessage(`Item added successfully. Sr.No: ${finalSrNo}`)
+        setSearch(String(finalSrNo))
+        resetForm()
       }
     }
 
@@ -442,6 +446,7 @@ function App() {
         note: mode === 'add' ? 'Custom quantity added' : 'Custom quantity removed',
       })
 
+      await fetchAll()
       setSuccessMessage(
         mode === 'add'
           ? `Added ${changeQty} to ${item.description}.`
@@ -452,8 +457,6 @@ function App() {
         ...prev,
         [item.id]: '',
       }))
-
-      await fetchAll()
     }
   }
 
@@ -481,33 +484,64 @@ function App() {
         note: 'Item deactivated',
       })
 
+      await fetchAll()
       setSuccessMessage('Item deactivated successfully.')
       if (editingItemId === item.id) resetForm()
-      await fetchAll()
     }
   }
 
-  function handleDownloadExcel() {
-    const exportRows = items.map((item) => ({
-      ID: item.id,
-      'Sr.No': item.sr_no || '',
-      Description: item.description || '',
-      'Model No': item.model_no || '',
-      Location: item.location || '',
-      Unit: item.unit || 'pcs',
-      Qty: Number(item.current_qty || 0),
-      'Min Stock Level': Number(item.min_stock_level || 0),
-      'Need To Order': item.need_to_order ? 'Yes' : 'No',
-      Status: getStatus(item),
-    }))
+  async function handleDownloadExcel() {
+    try {
+      setError('')
+      setSuccessMessage('')
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory')
-    XLSX.writeFile(
-      workbook,
-      `realize_workshop_inventory_${new Date().toISOString().slice(0, 10)}.xlsx`
-    )
+      const { data, error } = await supabase
+        .from('items')
+        .select(
+          'id, sr_no, description, model_no, location, unit, current_qty, min_stock_level, need_to_order, is_active'
+        )
+        .eq('is_active', true)
+        .order('id', { ascending: false })
+        .range(0, 20000)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      const exportRows = (data || []).map((item) => {
+        const qty = Number(item.current_qty || 0)
+        const min = Number(item.min_stock_level || 0)
+
+        let status = 'Available'
+        if (qty <= 0) status = 'Out of Stock'
+        else if (qty <= min) status = 'Low Stock'
+
+        return {
+          ID: item.id,
+          'Sr.No': item.sr_no || '',
+          Description: item.description || '',
+          'Model No': item.model_no || '',
+          Location: item.location || '',
+          Unit: item.unit || 'pcs',
+          Qty: qty,
+          'Min Stock Level': min,
+          'Need To Order': item.need_to_order ? 'Yes' : 'No',
+          Status: status,
+        }
+      })
+
+      const worksheet = XLSX.utils.json_to_sheet(exportRows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory')
+
+      const fileName = `realize_workshop_inventory_${Date.now()}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+
+      setSuccessMessage('Latest Excel downloaded successfully.')
+    } catch (err) {
+      setError(err.message || 'Failed to download Excel.')
+    }
   }
 
   if (authLoading) {
