@@ -544,6 +544,99 @@ function App() {
     }
   }
 
+  async function handleDownloadNeedToOrderExcel() {
+    try {
+      setError('')
+      setSuccessMessage('')
+
+      const { data, error } = await supabase
+        .from('items')
+        .select(
+          'id, sr_no, description, model_no, location, unit, current_qty, min_stock_level, need_to_order, is_active'
+        )
+        .eq('is_active', true)
+        .eq('need_to_order', true)
+        .order('id', { ascending: false })
+        .range(0, 20000)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      const exportRows = (data || []).map((item) => ({
+        ID: item.id,
+        'Sr.No': item.sr_no || '',
+        Description: item.description || '',
+        'Model No': item.model_no || '',
+        Location: item.location || '',
+        Unit: item.unit || 'pcs',
+        Qty: Number(item.current_qty || 0),
+        'Min Stock Level': Number(item.min_stock_level || 0),
+        'Need To Order': item.need_to_order ? 'Yes' : 'No',
+        Status: 'Need To Order',
+      }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportRows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Need To Order')
+
+      const fileName = `need_to_order_${Date.now()}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+
+      setSuccessMessage('Need To Order Excel downloaded successfully.')
+    } catch (err) {
+      setError(err.message || 'Failed to download Need To Order Excel.')
+    }
+  }
+
+  async function handleDownloadOutOfStockExcel() {
+    try {
+      setError('')
+      setSuccessMessage('')
+
+      const { data, error } = await supabase
+        .from('items')
+        .select(
+          'id, sr_no, description, model_no, location, unit, current_qty, min_stock_level, need_to_order, is_active'
+        )
+        .eq('is_active', true)
+        .order('id', { ascending: false })
+        .range(0, 20000)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      const exportRows = (data || [])
+        .filter((item) => Number(item.current_qty || 0) <= 0)
+        .map((item) => ({
+          ID: item.id,
+          'Sr.No': item.sr_no || '',
+          Description: item.description || '',
+          'Model No': item.model_no || '',
+          Location: item.location || '',
+          Unit: item.unit || 'pcs',
+          Qty: Number(item.current_qty || 0),
+          'Min Stock Level': Number(item.min_stock_level || 0),
+          'Need To Order': item.need_to_order ? 'Yes' : 'No',
+          Status: 'Out Of Stock',
+        }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportRows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Out Of Stock')
+
+      const fileName = `out_of_stock_${Date.now()}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+
+      setSuccessMessage('Out Of Stock Excel downloaded successfully.')
+    } catch (err) {
+      setError(err.message || 'Failed to download Out Of Stock Excel.')
+    }
+  }
+
   if (authLoading) {
     return (
       <div className="auth-page">
@@ -603,6 +696,12 @@ function App() {
           <div className="top-actions">
             <button className="export-btn" onClick={handleDownloadExcel}>
               Download Excel
+            </button>
+            <button className="export-btn" onClick={handleDownloadNeedToOrderExcel}>
+              Need To Order Excel
+            </button>
+            <button className="export-btn" onClick={handleDownloadOutOfStockExcel}>
+              Out Of Stock Excel
             </button>
             <button className="refresh-btn" onClick={fetchAll}>
               Refresh
