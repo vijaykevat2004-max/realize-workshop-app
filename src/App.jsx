@@ -514,7 +514,7 @@ function App() {
         const min = Number(item.min_stock_level || 0)
 
         let status = 'Available'
-        if (qty <= 0) status = 'Out of Stock'
+        if (qty <= 0) status = 'Out Of Stock'
         else if (qty <= min) status = 'Low Stock'
 
         return {
@@ -564,7 +564,12 @@ function App() {
         return
       }
 
-      const exportRows = (data || []).map((item) => ({
+      if (!data || data.length === 0) {
+        setError('No need to order items found.')
+        return
+      }
+
+      const exportRows = data.map((item) => ({
         ID: item.id,
         'Sr.No': item.sr_no || '',
         Description: item.description || '',
@@ -601,6 +606,7 @@ function App() {
           'id, sr_no, description, model_no, location, unit, current_qty, min_stock_level, need_to_order, is_active'
         )
         .eq('is_active', true)
+        .lte('current_qty', 0)
         .order('id', { ascending: false })
         .range(0, 20000)
 
@@ -609,20 +615,23 @@ function App() {
         return
       }
 
-      const exportRows = (data || [])
-        .filter((item) => Number(item.current_qty || 0) <= 0)
-        .map((item) => ({
-          ID: item.id,
-          'Sr.No': item.sr_no || '',
-          Description: item.description || '',
-          'Model No': item.model_no || '',
-          Location: item.location || '',
-          Unit: item.unit || 'pcs',
-          Qty: Number(item.current_qty || 0),
-          'Min Stock Level': Number(item.min_stock_level || 0),
-          'Need To Order': item.need_to_order ? 'Yes' : 'No',
-          Status: 'Out Of Stock',
-        }))
+      if (!data || data.length === 0) {
+        setError('No out of stock items found.')
+        return
+      }
+
+      const exportRows = data.map((item) => ({
+        ID: item.id,
+        'Sr.No': item.sr_no || '',
+        Description: item.description || '',
+        'Model No': item.model_no || '',
+        Location: item.location || '',
+        Unit: item.unit || 'pcs',
+        Qty: Number(item.current_qty || 0),
+        'Min Stock Level': Number(item.min_stock_level || 0),
+        'Need To Order': item.need_to_order ? 'Yes' : 'No',
+        Status: 'Out Of Stock',
+      }))
 
       const worksheet = XLSX.utils.json_to_sheet(exportRows)
       const workbook = XLSX.utils.book_new()
